@@ -17,7 +17,7 @@ A = [
     -k/m -c/m
 ]
 
-B = [0 ; 1]
+B = [0 ; 1/m]
 
 C = [1 0]
 
@@ -40,5 +40,32 @@ Y,_,_ = lsim(sys,U,t,x0);
 
 na= 2
 nb = 1
-sysARX = ARX_K(Y,U,na,nb,dt)
+η = 0.001
+tol = 1e-8
+sysARX = ARX_K(Y,U,na,nb,dt);
+
+Arduino = ControllerInit(η,na,nb);
+
+grad_Bulid(Arduino,ns,Y,U)
+
+M =  [40000.0    -787.791   -788.741; -787.791    20.5128    20.5123; -788.741    20.5123    20.5128]
+L =  [789.6883998477451 ,-20.510924087846533,-20.512348335936757]
+
+Arduino.M = M
+Arduino.L = L
+
+GDS(c)
+AdamRun(c)
+
+
+
+# Arduino.M\Arduino.L
+
+# Identified = tf(Arduino.θ[na+nb],[1; -Arduino.θ[1:na]],dt)
+# dampreport(Identified)
+
+
+# Ys,_,_ = lsim(Identified,U,t,x0);
+# plot(t,Ys')
+
 
