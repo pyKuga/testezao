@@ -1,8 +1,8 @@
 mutable struct Controller
     M::Matrix
     L::Vector
-    θ::Vector
     h::Vector
+    θ::Vector
     ∇::Vector
     na::Int64  
     nb::Int64
@@ -17,53 +17,40 @@ mutable struct AdamOpt
     β::Float64
     t::Int64
     ϵ::Float64
-    m_p::Vector
-    m_c::Vector
-    v_p::Vector
-    v_c::Vector
+    m::Vector
+    v::Vector
 end
 
-function ControllerInit(η,na,nb)
+function ControllerInit(η,na,nb,tol)
     z = zeros(na+nb);
     r = rand(na+nb)
     i = na
-    tol = 10e-8
-    return Controller(
-        z*z',
-        z,
-        r,
-        z,
-        r,
-        na,
-        nb,
-        i,
-        η,
-        tol
-        )
+    return Controller(z*z',z,z,r,r,na,nb,i,η,tol)
 end
 
 function  MSEGrad(c,ns)
     return 2*(c.M*c.θ-c.L)/ns
 end
 
-function AdamInit(na,nb,η,α,β)
+function AdamInit(η,α,β,ϵ)
     t = 0
-    ϵ = 1e-8
     z = zeros(na+nb)
-    AdamOpt(η,α,β,t,ϵ,z,z,z,z)
+    AdamOpt(η,α,β,t,ϵ,z,z)
 end
 
 function AdamRun(c)
-    opt = AdamInit(c.η,0.9,0.999,0,10e-8)
-    while norm(c.Δ)/norm(c.θ) > c.tol
-        t += 1;
-        c.∇ = MSEGrad(Controller,ns);
-        opt.m_c = opt.α*opt.m_p + (1-opt.α)*∇;
-        opt.v_c = opt.β*opt.v_p + (1-opt.β)*∇.^2;
-        hat_mc = opt.m_c/(1-α^t);
-        hat_vc = opt.v_c/(1-β^t);
-        Δ = c.η*hat_mc./(sqrt.(hat_vc).+ϵ)
+    opt = AdamInit(c.η,0.9,0.999,1e-8)
+    Δ = 100
+    while norm(Δ)/norm(c.θ) > c.tol
+        opt.t += 1;
+        c.∇ = MSEGrad(c,ns);
+        opt.m = opt.α*opt.m + (1-opt.α)*c.∇;
+        opt.v = opt.β*opt.v + (1-opt.β)*c.∇.^2;
+        hat_m = opt.m/(1-opt.α^opt.t);
+        hat_v = opt.v/(1-opt.β^opt.t);
+        Δ = c.η*hat_m./(sqrt.(hat_v).+opt.ϵ)
         c.θ = c.θ - Δ
+        print("\r"*string(norm(Δ)/norm(c.θ)))
     end
 end
 
@@ -89,8 +76,9 @@ end
 
 function GDS(c)
     while norm(c.η*c.∇)/norm(c.θ) > c.tol
-        c.∇ = MSEGrad(Controller,ns)
+        c.∇ = MSEGrad(c,ns)
         c.θ = c.θ - c.η*c.∇
+        print("\r"*string(norm(c.η*c.∇)/norm(c.θ)))
     end
 end
 

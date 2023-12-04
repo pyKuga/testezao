@@ -26,8 +26,8 @@ D = 0
 sys = ss(A,B,C,D)
 
 #numerical conditions are set up
-dt = 2e-3;
-maxT = 10;
+dt = 2e-5;
+maxT = 6;
 ns = round(Int,maxT/dt)+1;
 t = 0:dt:maxT;
 
@@ -35,27 +35,23 @@ t = 0:dt:maxT;
 x0 = [0; 0];
 
 #identification parameters
-U = 4*PulseGen(ns); 
+U = ones(1,ns);#PulseGen(ns); 
 Y,_,_ = lsim(sys,U,t,x0);
+sysARX = ARX_K(Y,U,na,nb,dt);
 
 na= 2
 nb = 1
-η = 0.001
-tol = 1e-8
-sysARX = ARX_K(Y,U,na,nb,dt);
+η = 1e-5:5e-6:1e-2
+tol = 1e-5
 
-Arduino = ControllerInit(η,na,nb);
-
+Arduino = ControllerInit(η,na,nb,tol);
 grad_Bulid(Arduino,ns,Y,U)
-
-M =  [40000.0    -787.791   -788.741; -787.791    20.5128    20.5123; -788.741    20.5123    20.5128]
-L =  [789.6883998477451 ,-20.510924087846533,-20.512348335936757]
-
-Arduino.M = M
-Arduino.L = L
-
-GDS(c)
-AdamRun(c)
+for ratio in η
+    Arduino.η = ratio
+    GDS(Arduino)
+    GDScoef = Arduino.θ
+    AdamRun(Arduino)
+    Adamcoef = Arduino.θ
 
 
 
